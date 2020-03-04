@@ -119,14 +119,26 @@ namespace GithubStream
         private static void SaveRateLimits(HttpResponseHeaders headers)
         {
             // X-RateLimit-Remaining: 45
-            int.TryParse(headers.GetValues("X-RateLimit-Remaining").FirstOrDefault(), out int rateLimitRemaining);
-            _rateLimitRemaining = rateLimitRemaining == 0 ? MaxRateLimit : rateLimitRemaining;
-            _log.LogInformation($"Rate Limit Remaining: {_rateLimitRemaining}");
+            if (int.TryParse(headers.GetValues("X-RateLimit-Remaining").FirstOrDefault(), out int rateLimitRemaining))
+            {
+                _rateLimitRemaining = rateLimitRemaining;
+                _log.LogInformation($"Rate Limit Remaining: {_rateLimitRemaining}");
+            } 
+            else
+            {
+                throw new InvalidOperationException($"Could not parse X-RateLimit-Remaining: {headers.GetValues("X-RateLimit-Remaining").FirstOrDefault()}");
+            }
 
             // X-RateLimit-Reset: 1372700873
-            int.TryParse(headers.GetValues("X-RateLimit-Reset").FirstOrDefault(), out int rateLimitReset);
-            _rateLimitResetDateTime = rateLimitReset == 0 ? DateTimeOffset.UtcNow : DateTimeOffset.FromUnixTimeSeconds(rateLimitReset);
-            _log.LogInformation($"Rate Limit Reset: {_rateLimitResetDateTime}");
+            if (int.TryParse(headers.GetValues("X-RateLimit-Reset").FirstOrDefault(), out int rateLimitReset))
+            {
+                _rateLimitResetDateTime = DateTimeOffset.FromUnixTimeSeconds(rateLimitReset);
+                _log.LogInformation($"Rate Limit Reset: {_rateLimitResetDateTime}");
+            }
+            else
+            {
+                throw new InvalidOperationException($"Could not parse X-RateLimit-Reset: {headers.GetValues("X-RateLimit-Reset").FirstOrDefault()}");
+            }
         }
     }
 
