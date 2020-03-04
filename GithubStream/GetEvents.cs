@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -20,14 +21,22 @@ namespace GithubStream
         private static int _rateLimitRemaining;
         private static DateTimeOffset _rateLimitResetDateTime = DateTime.UtcNow;
         private static ILogger _log;
+        private static IConfiguration _config;
 
         [FunctionName(nameof(GetEvents))]
         public static async Task Run(
-            [TimerTrigger("0 */1 * * * *",RunOnStartup = true)]TimerInfo myTimer,
+            [TimerTrigger("0 */1 * * * *")]TimerInfo timer,
             [EventHub("githubstream", Connection = "EventHubConnectionString")]IAsyncCollector<EventData> outputEvents,
-            ILogger log)
+            ILogger log,
+            ExecutionContext context)
         {
             _log = log;
+            _config = new ConfigurationBuilder()
+                .SetBasePath(context.FunctionAppDirectory)
+                .AddJsonFile("local.settings.json", optional: true)
+                .AddEnvironmentVariables()
+                .Build();
+
             _log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
             if (IsRateLimitExhausted())
@@ -73,10 +82,26 @@ namespace GithubStream
             if (page > MaxPages) throw new ArgumentOutOfRangeException(nameof(page), $"page cannot be greater than {MaxPages}");
 
             int pageIndex = page - 1;
+
             string url = $"https://api.github.com/orgs/microsoft/events?page={page}";
-            _log.LogInformation($"GET {url}");
             var request = new HttpRequestMessage(HttpMethod.Get, url);
+            
+            // User-Agent
             request.Headers.UserAgent.Add(new ProductInfoHeaderValue(new ProductHeaderValue("DanielLarsenNZ-GithubStream")));
+
+            // Authorization
+            if (!string.IsNullOrEmpty(_config["GitHubAppClientId"]))
+            {
+                request.Headers.Authorization =
+                    new AuthenticationHeaderValue(
+                        "Basic", Convert.ToBase64String(
+                            Encoding.ASCII.GetBytes(
+                               $"{_config["GitHubAppClientId"]}:{_config["GitHubAppClientSecret"]}")));
+
+                _log.LogInformation($"Authorization: Basic {_config["GitHubAppClientId"]}:...");
+            }
+
+            // ETag
             if (_eTags[pageIndex] != null)
             {
                 request.Headers.IfNoneMatch.Add(_eTags[pageIndex]);
