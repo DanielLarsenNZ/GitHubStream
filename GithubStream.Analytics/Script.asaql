@@ -1,0 +1,8 @@
+﻿SELECT
+    payload
+INTO
+    topics
+FROM
+    githubstream
+WHERE
+    type LIKE '%Comment%'

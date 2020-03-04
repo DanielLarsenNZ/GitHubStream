@@ -1,0 +1,30 @@
+﻿{
+  "Sample": "",
+  "EventHubProperties": {
+    "ConsumerGroupName": null,
+    "EventHubName": "githubstream",
+    "ServiceBusNamespace": "githubstream-hub",
+    "SharedAccessPolicyKey": null,
+    "SharedAccessPolicyName": "githubstream-job_githubstream_policy"
+  },
+  "BlobStorageProperties": null,
+  "IoTHubProperties": null,
+  "BlobReferenceProperties": null,
+  "SqlReferenceInputInfo": null,
+  "InputPartionKey": null,
+  "DataSourceCredentialDomain": "7694a4f6-bd1d-411f-910e-bd3b6482492c.StreamAnalyticsCredential",
+  "Name": "githubstream",
+  "Type": "Data Stream",
+  "DataSourceType": "Event Hub",
+  "Serialization": {
+    "Encoding": "UTF8",
+    "Type": "Json",
+    "FieldDelimiter": null,
+    "Format": null,
+    "SerializationDllPath": null,
+    "SerializationClassName": null,
+    "SerializationDllPathInLocal": null
+  },
+  "CompresssionType": "None",
+  "ScriptType": "Input"
+}

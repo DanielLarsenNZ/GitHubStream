@@ -1,0 +1,36 @@
+﻿{
+  "EventHubProperties": null,
+  "BlobStorageProperties": null,
+  "SQLDatabaseProperties": null,
+  "TableStorageProperties": null,
+  "ServiceBusQueueProperties": null,
+  "ServiceBusTopicProperties": {
+    "ServiceBusNamespace": "githubstream-bus",
+    "SharedAccessPolicyKey": null,
+    "SharedAccessPolicyName": "SenderReceiver1",
+    "TopicName": "comments",
+    "PropertyColumns": [
+      "Type"
+    ],
+    "SystemPropertyColumns": {}
+  },
+  "DocumentDbProperties": null,
+  "PowellBIProperties": null,
+  "AzureDataLakeStoreProperties": null,
+  "AzureFunctionProperties": null,
+  "DataSourceCredentialDomain": "c36c50a2-e464-4838-a2c2-46930f11ce5e.StreamAnalyticsCredential",
+  "Name": "topics",
+  "DataSourceType": "Service Bus Topic",
+  "Serialization": {
+    "Encoding": "UTF8",
+    "Type": "Json",
+    "FieldDelimiter": null,
+    "Format": "Array",
+    "SerializationDllPath": null,
+    "SerializationClassName": null,
+    "SerializationDllPathInLocal": null
+  },
+  "MinimumRows": null,
+  "MaximumTime": null,
+  "ScriptType": "Output"
+}

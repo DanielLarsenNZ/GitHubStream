@@ -1,7 +1,8 @@
 {
-  "version": "2.0",
-  "functions": [
-    "LogComment"
-  ]
+  "version": "2.0"
+  //  ,
+  //"functions": [
+  //  "LogComment"
+  //]
 
 }

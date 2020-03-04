@@ -77,8 +77,7 @@ $instrumentationKey
 az functionapp create -n $functionApp -g $rg --tags $tags --consumption-plan-location $location -s $webjobsStorage --app-insights $insights --app-insights-key $instrumentationKey
 
 # APP SETTINGS
-az functionapp config appsettings set -n $functionApp -g $rg --settings "APPINSIGHTS_INSTRUMENTATIONKEY=$instrumentationKey" "AzureWebJobsStorage=$webjobsStorageConnection" "EventHubConnectionString=$eventhubConnectionString" "ServiceBusConnectionString=$servicebusConnectionString"
-
+#az functionapp config appsettings set -n $functionApp -g $rg --settings "APPINSIGHTS_INSTRUMENTATIONKEY=$instrumentationKey" "AzureWebJobsStorage=$webjobsStorageConnection" "EventHubConnectionString=$eventhubConnectionString" "ServiceBusConnectionString=$servicebusConnectionString"
 
 # Tear down
 # az group delete -n $rg --yes
