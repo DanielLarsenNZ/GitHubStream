@@ -10,6 +10,7 @@ $eventhubs = 'githubstream'
 $eventhubAuthRule = 'SenderListener1'
 $servicebusNamespace = 'githubstream-bus'
 $topics = 'comments'
+$subscriptions = 'LogComment'
 $servicebusAuthRule = 'SenderReceiver1'
 $servicebusSku = 'Standard'
 $eventhubsSku = 'Basic'
@@ -45,6 +46,10 @@ az servicebus namespace create -g $rg --name $servicebusNamespace --location $lo
 
 foreach ($topic in $topics) {
     az servicebus topic create -g $rg --namespace-name $servicebusNamespace --name $topic #--default-message-time-to-live 'P14D'
+}
+
+foreach ($subscription in $subscriptions) {
+    az servicebus topic subscription create -g $rg --namespace-name $servicebusNamespace --topic-name $topic -n $subscription
 }
 
 az servicebus namespace authorization-rule create -g $rg --namespace-name $servicebusNamespace --name $servicebusAuthRule --rights Listen Send
