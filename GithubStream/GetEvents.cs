@@ -30,8 +30,6 @@ namespace GithubStream
             _log = log;
             _log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
-            _rateLimitRemaining = MaxRateLimit;
-
             if (IsRateLimitExhausted())
             {
                 _log.LogInformation($"Rate limit exhausted until {_rateLimitResetDateTime}");

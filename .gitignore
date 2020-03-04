@@ -3,3 +3,5 @@ bin
 .vs
 *.user
 _work
+_functionzip
+deployfunction.zip
