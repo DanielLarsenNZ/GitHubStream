@@ -14,8 +14,11 @@ namespace GithubStream
     public static class GetEvents
     {
         private const int MaxPages = 10;
-        private static HttpClient _http = new HttpClient();
-        private static EntityTagHeaderValue[] _eTags = new EntityTagHeaderValue[MaxPages];
+        private const int MaxRateLimit = 5000;
+        private static readonly HttpClient _http = new HttpClient();
+        private static readonly EntityTagHeaderValue[] _eTags = new EntityTagHeaderValue[MaxPages];
+        private static int _rateLimitRemaining;
+        private static DateTimeOffset _rateLimitResetDateTime = DateTime.UtcNow;
         private static ILogger _log;
 
         [FunctionName(nameof(GetEvents))]
@@ -27,6 +30,13 @@ namespace GithubStream
             _log = log;
             _log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
+            _rateLimitRemaining = MaxRateLimit;
+
+            if (IsRateLimitExhausted())
+            {
+                _log.LogInformation($"Rate limit exhausted until {_rateLimitResetDateTime}");
+                return;
+            }
 
             int page = 1;
             var result = await GetPageOfEvents(page);
@@ -46,10 +56,15 @@ namespace GithubStream
                 }
 
                 if (events.Length < 30) break;
-                if (result.RateLimitRemaining <= 0) break;
 
                 page++;
                 if (page > 10) break;
+
+                if (IsRateLimitExhausted())
+                {
+                    _log.LogInformation($"Rate limit remaining: {_rateLimitRemaining} resets at {_rateLimitResetDateTime}");
+                    break;
+                }
 
                 result = await GetPageOfEvents(page);
             }
@@ -71,25 +86,47 @@ namespace GithubStream
             }
 
             var response = await _http.SendAsync(request);
+            
+            // HTTP STATUS 304
             if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
             {
                 _log.LogInformation($"{url} Not Modified ETag = {_eTags[pageIndex]}");
                 return new GetPageOfEventsResult();
             }
 
+            // HTTP STATUS 403
+            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                _log.LogError(await response.Content.ReadAsStringAsync());
+                SaveRateLimits(response.Headers);
+            }
+
             response.EnsureSuccessStatusCode();
 
             _eTags[pageIndex] = response.Headers.ETag;
 
-            // X-RateLimit-Remaining: 45
-            int.TryParse(response.Headers.GetValues("X-RateLimit-Remaining").FirstOrDefault(), out int rateLimitRemaining);
+            SaveRateLimits(response.Headers);
 
             _log.LogInformation($"ETag {_eTags[pageIndex]}");
-            _log.LogInformation($"X-RateLimit-Remaining {rateLimitRemaining}");
+
 
             return new GetPageOfEventsResult(
-                JsonConvert.DeserializeObject<Events[]>(await response.Content.ReadAsStringAsync()))
-            { RateLimitRemaining = rateLimitRemaining };
+                JsonConvert.DeserializeObject<Events[]>(await response.Content.ReadAsStringAsync()));
+        }
+
+        private static bool IsRateLimitExhausted() => _rateLimitRemaining < 1 && _rateLimitResetDateTime > DateTime.UtcNow;
+
+        private static void SaveRateLimits(HttpResponseHeaders headers)
+        {
+            // X-RateLimit-Remaining: 45
+            int.TryParse(headers.GetValues("X-RateLimit-Remaining").FirstOrDefault(), out int rateLimitRemaining);
+            _rateLimitRemaining = rateLimitRemaining == 0 ? MaxRateLimit : rateLimitRemaining;
+            _log.LogInformation($"Rate Limit Remaining: {_rateLimitRemaining}");
+
+            // X-RateLimit-Reset: 1372700873
+            int.TryParse(headers.GetValues("X-RateLimit-Reset").FirstOrDefault(), out int rateLimitReset);
+            _rateLimitResetDateTime = rateLimitReset == 0 ? DateTimeOffset.UtcNow : DateTimeOffset.FromUnixTimeSeconds(rateLimitReset);
+            _log.LogInformation($"Rate Limit Reset: {_rateLimitResetDateTime}");
         }
     }
 
@@ -105,7 +142,5 @@ namespace GithubStream
         public Events[] Events { get; set; }
 
         public bool HasEvents { get { return Events.Any(); } }
-
-        public int RateLimitRemaining { get; set; }
     }
 }
