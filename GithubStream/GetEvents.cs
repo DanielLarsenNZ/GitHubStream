@@ -12,7 +12,7 @@ using Newtonsoft.Json;
 
 namespace GithubStream
 {
-    public static class GetEvents
+    public class GetEvents
     {
         private const int MaxPages = 10;
         private const int MaxRateLimit = 5000;
@@ -24,18 +24,14 @@ namespace GithubStream
         private static IConfiguration _config;
 
         [FunctionName(nameof(GetEvents))]
-        public static async Task Run(
+        public async Task Run(
             [TimerTrigger("0 */1 * * * *")]TimerInfo timer,
             [EventHub("githubstream", Connection = "EventHubConnectionString")]IAsyncCollector<EventData> outputEvents,
             ILogger log,
-            ExecutionContext context)
+            IConfiguration config)
         {
             _log = log;
-            _config = new ConfigurationBuilder()
-                .SetBasePath(context.FunctionAppDirectory)
-                .AddJsonFile("local.settings.json", optional: true)
-                .AddEnvironmentVariables()
-                .Build();
+            _config = config;
 
             _log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 

@@ -11,3 +11,5 @@
 <https://docs.microsoft.com/en-us/azure/stream-analytics/stream-analytics-documentdb-output>
 
 <https://docs.microsoft.com/en-us/azure/stream-analytics/stream-analytics-add-inputs>
+
+<https://docs.microsoft.com/en-us/azure/stream-analytics/stream-analytics-window-functions>

@@ -5,8 +5,6 @@ VisualStudioVersion = 16.0.29609.76
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GithubStream", "GithubStream.csproj", "{3F69AC7E-4A21-43CC-B4E3-96257E5DD9C1}"
 EndProject
-Project("{E6C563F2-BDC2-4A24-ACBF-01715157DCBB}") = "GithubStream.Analytics", "..\GithubStream.Analytics\GithubStream.Analytics.asaproj", "{C18E3D52-FA8B-4207-B107-78F270E6C60A}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{3F69AC7E-4A21-43CC-B4E3-96257E5DD9C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3F69AC7E-4A21-43CC-B4E3-96257E5DD9C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3F69AC7E-4A21-43CC-B4E3-96257E5DD9C1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C18E3D52-FA8B-4207-B107-78F270E6C60A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C18E3D52-FA8B-4207-B107-78F270E6C60A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C18E3D52-FA8B-4207-B107-78F270E6C60A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C18E3D52-FA8B-4207-B107-78F270E6C60A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
