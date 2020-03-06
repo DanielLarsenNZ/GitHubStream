@@ -93,7 +93,7 @@ az functionapp config appsettings set -n $functionApp -g $rg --settings `
     "GitHubAppClientSecret=$($config.Values.GitHubAppClientSecret)" `
     "CosmosConnectionString=$cosmosConnection" `
     "CosmosDbName=$cosmosdb" `
-    "CosmosCollection"=$collection
+    "CosmosCollection=$collection"
 
 
 # Tear down
