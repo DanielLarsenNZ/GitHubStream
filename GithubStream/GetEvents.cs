@@ -8,6 +8,7 @@ using Microsoft.Azure.EventHubs;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
 namespace GithubStream
@@ -21,17 +22,22 @@ namespace GithubStream
         private static int _rateLimitRemaining;
         private static DateTimeOffset _rateLimitResetDateTime = DateTime.UtcNow;
         private static ILogger _log;
+        private static IOptions<GitHubOptions> _settings;
         private static IConfiguration _config;
+
+        public GetEvents(IOptions<GitHubOptions> settings, IConfiguration config)
+        {
+            _settings = settings;
+            _config = config;
+        }
 
         [FunctionName(nameof(GetEvents))]
         public async Task Run(
             [TimerTrigger("0 */1 * * * *")]TimerInfo timer,
             [EventHub("githubstream", Connection = "EventHubConnectionString")]IAsyncCollector<EventData> outputEvents,
-            ILogger log,
-            IConfiguration config)
+            ILogger log)
         {
             _log = log;
-            _config = config;
 
             _log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
@@ -94,7 +100,7 @@ namespace GithubStream
                             Encoding.ASCII.GetBytes(
                                $"{_config["GitHubAppClientId"]}:{_config["GitHubAppClientSecret"]}")));
 
-                _log.LogInformation($"Authorization: Basic {_config["GitHubAppClientId"]}:...");
+                _log.LogInformation($"Authorization: Basic {_config["GitHubAppClientId"]}...");
             }
 
             // ETag
