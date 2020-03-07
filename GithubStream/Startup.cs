@@ -17,16 +17,11 @@ namespace GithubStream
 
         public override void Configure(IFunctionsHostBuilder builder)
         {
-            var executioncontextoptions = builder.Services.BuildServiceProvider()
-                .GetService<IOptions<ExecutionContextOptions>>().Value;
-            var currentDirectory = executioncontextoptions.AppDirectory;
-
-            builder.Services.AddOptions<GitHubOptions>()
-                .Configure<IConfiguration>((settings, configuration) =>
-                {
-                    configuration.GetSection(nameof(GitHubOptions)).Bind(settings);
-                });
-
+            // all of this to get configuration in Startup :/
+            string currentDirectory = builder.Services
+                .BuildServiceProvider()
+                .GetService<IOptions<ExecutionContextOptions>>()
+                .Value.AppDirectory;
             var config = new ConfigurationBuilder()
                .SetBasePath(currentDirectory)
                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -39,18 +34,4 @@ namespace GithubStream
             });
         }
     }
-
-    public class CosmosOptions
-    {
-        public string CosmosConnectionString { get; set; }
-        public string CosmosDbName { get; set; }
-        public string CosmosCollection { get; set; }
-    }
-
-    public class GitHubOptions
-    {
-        public string GitHubAppClientId { get; set; }
-        public string GitHubAppClientSecret { get; set; }
-    }
-
 }

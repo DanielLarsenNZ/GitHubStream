@@ -1,34 +1,49 @@
+using Microsoft.Azure.EventHubs;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Azure.EventHubs;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 
 namespace GithubStream
 {
     public class GetEvents
     {
         private const int MaxPages = 10;
-        private const int MaxRateLimit = 5000;
-        private static readonly HttpClient _http = new HttpClient();
-        private static readonly EntityTagHeaderValue[] _eTags = new EntityTagHeaderValue[MaxPages];
-        private static int _rateLimitRemaining;
-        private static DateTimeOffset _rateLimitResetDateTime = DateTime.UtcNow;
-        private static ILogger _log;
-        private static IOptions<GitHubOptions> _settings;
-        private static IConfiguration _config;
+        private readonly HttpClient _http;
+        private readonly EntityTagHeaderValue[] _eTags = new EntityTagHeaderValue[MaxPages];
 
-        public GetEvents(IOptions<GitHubOptions> settings, IConfiguration config)
+        // GetEvents is a Singleton due to the Timer trigger
+
+        // The number of calls to GitHub API remaining until _rateLimitResetDateTime
+        private int _rateLimitRemaining;
+        // The DateTime that the GitHub API rate limit resets
+        private DateTimeOffset _rateLimitResetDateTime = DateTime.UtcNow;
+
+        private ILogger _log;
+
+        public GetEvents(IConfiguration config, HttpClient httpClient)
         {
-            _settings = settings;
-            _config = config;
+            _http = httpClient;
+
+            // User-Agent header
+            _http.DefaultRequestHeaders.UserAgent.Add(
+                new ProductInfoHeaderValue(new ProductHeaderValue("DanielLarsenNZ-GithubStream")));
+
+            // Authorization header
+            if (!string.IsNullOrEmpty(config["GitHubAppClientId"]))
+            {
+                _http.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue(
+                        "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes(
+                               $"{config["GitHubAppClientId"]}:{config["GitHubAppClientSecret"]}")));
+
+                _log.LogInformation($"Authorization: Basic {config["GitHubAppClientId"]}...");
+            }
         }
 
         [FunctionName(nameof(GetEvents))]
@@ -38,7 +53,6 @@ namespace GithubStream
             ILogger log)
         {
             _log = log;
-
             _log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
             if (IsRateLimitExhausted())
@@ -51,23 +65,22 @@ namespace GithubStream
             var result = await GetPageOfEvents(page);
             while (result.HasEvents)
             {
-                var events = result.Events;
-                _log.LogInformation($"Received Page {page} containing {events.Length} events");
+                _log.LogInformation($"Received Page {page} containing {result.Events.Length} events");
 
-                foreach (var @event in events)
+                foreach (var @event in result.Events)
                 {
-                    // add an event to event hub
                     _log.LogInformation(@event.Type);
 
-                    var eventData = new EventData(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(@event)));
+                    // send event to event hub
+                    var eventData = new EventData(Encoding.UTF8.GetBytes(JsonHelper.SerializeObject(@event)));
                     eventData.Properties.Add("GithubEventType", @event.Type);
                     await outputEvents.AddAsync(eventData);
                 }
 
-                if (events.Length < 30) break;
+                if (result.IsLastPageOfEvents) break;
 
                 page++;
-                if (page > 10) break;
+                if (page > MaxPages) break;
 
                 if (IsRateLimitExhausted())
                 {
@@ -79,76 +92,65 @@ namespace GithubStream
             }
         }
 
-        private static async Task<GetPageOfEventsResult> GetPageOfEvents(int page)
+        private async Task<GetPageOfEventsResult> GetPageOfEvents(int page)
         {
             if (page > MaxPages) throw new ArgumentOutOfRangeException(nameof(page), $"page cannot be greater than {MaxPages}");
 
-            int pageIndex = page - 1;
-
             string url = $"https://api.github.com/orgs/microsoft/events?page={page}";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
-            
-            // User-Agent
-            request.Headers.UserAgent.Add(new ProductInfoHeaderValue(new ProductHeaderValue("DanielLarsenNZ-GithubStream")));
 
-            // Authorization
-            if (!string.IsNullOrEmpty(_config["GitHubAppClientId"]))
+            // GetEvents is a singleton. ETags are cached in a class field (Storage or Redis would be better)
+            // If we have saved the latest ETag for this page then set If-None-Match header
+            if (ETag(page) != null)
             {
-                request.Headers.Authorization =
-                    new AuthenticationHeaderValue(
-                        "Basic", Convert.ToBase64String(
-                            Encoding.ASCII.GetBytes(
-                               $"{_config["GitHubAppClientId"]}:{_config["GitHubAppClientSecret"]}")));
-
-                _log.LogInformation($"Authorization: Basic {_config["GitHubAppClientId"]}...");
-            }
-
-            // ETag
-            if (_eTags[pageIndex] != null)
-            {
-                request.Headers.IfNoneMatch.Add(_eTags[pageIndex]);
-                _log.LogInformation($"If-None-Match {_eTags[pageIndex]}");
+                request.Headers.IfNoneMatch.Add(ETag(page));
+                _log.LogInformation($"If-None-Match {ETag(page)}");
             }
 
             var response = await _http.SendAsync(request);
-            
+
             // HTTP STATUS 304
+            // There are no new events since the last request. Return an empty result.
+            // ETag does not change. 304 response does not count against rate limit.
             if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
             {
-                _log.LogInformation($"{url} Not Modified ETag = {_eTags[pageIndex]}");
+                _log.LogInformation($"{url} Not Modified ETag = {ETag(page)}");
                 return new GetPageOfEventsResult();
             }
 
             // HTTP STATUS 403
+            // Rate limit has been exceeded. Save the current rate limits and throw
             if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
             {
                 _log.LogError(await response.Content.ReadAsStringAsync());
                 SaveRateLimits(response.Headers);
+                response.EnsureSuccessStatusCode(); // throw the 403
             }
 
+            // throws here if not a 2XX HTTP status code
             response.EnsureSuccessStatusCode();
-
-            _eTags[pageIndex] = response.Headers.ETag;
 
             SaveRateLimits(response.Headers);
 
-            _log.LogInformation($"ETag {_eTags[pageIndex]}");
+            SaveETag(page, response.Headers.ETag);
+            _log.LogInformation($"ETag {ETag(page)}");
 
-
-            return new GetPageOfEventsResult(
-                JsonConvert.DeserializeObject<Events[]>(await response.Content.ReadAsStringAsync()));
+            return new GetPageOfEventsResult(await JsonHelper.DeserializeEvents(response));
         }
 
-        private static bool IsRateLimitExhausted() => _rateLimitRemaining < 1 && _rateLimitResetDateTime > DateTime.UtcNow;
+        private EntityTagHeaderValue ETag(int page) => _eTags[page - 1];
+        private void SaveETag(int page, EntityTagHeaderValue eTag) => _eTags[page - 1] = eTag;
 
-        private static void SaveRateLimits(HttpResponseHeaders headers)
+        private bool IsRateLimitExhausted() => _rateLimitRemaining < 1 && _rateLimitResetDateTime > DateTime.UtcNow;
+
+        private void SaveRateLimits(HttpResponseHeaders headers)
         {
             // X-RateLimit-Remaining: 45
             if (int.TryParse(headers.GetValues("X-RateLimit-Remaining").FirstOrDefault(), out int rateLimitRemaining))
             {
                 _rateLimitRemaining = rateLimitRemaining;
                 _log.LogInformation($"Rate Limit Remaining: {_rateLimitRemaining}");
-            } 
+            }
             else
             {
                 throw new InvalidOperationException($"Could not parse X-RateLimit-Remaining: {headers.GetValues("X-RateLimit-Remaining").FirstOrDefault()}");
@@ -169,15 +171,21 @@ namespace GithubStream
 
     internal class GetPageOfEventsResult
     {
-        public GetPageOfEventsResult() : this(new Events[0]) { }
+        public GetPageOfEventsResult() : this(new Event[0]) { }
 
-        public GetPageOfEventsResult(Events[] events)
+        public GetPageOfEventsResult(Event[] events)
         {
             Events = events;
         }
 
-        public Events[] Events { get; set; }
+        public Event[] Events { get; set; }
 
-        public bool HasEvents { get { return Events.Any(); } }
+        public bool HasEvents => Events.Any();
+
+        /// <summary>
+        /// A full page of events is 30 in GitHub API v2. API does not return a total page count. If 
+        /// less than a full page was returned, this is the last page.
+        /// </summary>
+        public bool IsLastPageOfEvents => Events.Length < 30;
     }
 }
