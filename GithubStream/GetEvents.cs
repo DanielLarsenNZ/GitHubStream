@@ -29,21 +29,6 @@ namespace GithubStream
         public GetEvents(IConfiguration config, HttpClient httpClient)
         {
             _http = httpClient;
-
-            // User-Agent header
-            _http.DefaultRequestHeaders.UserAgent.Add(
-                new ProductInfoHeaderValue(new ProductHeaderValue("DanielLarsenNZ-GithubStream")));
-
-            // Authorization header
-            if (!string.IsNullOrEmpty(config["GitHubAppClientId"]))
-            {
-                _http.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue(
-                        "Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes(
-                               $"{config["GitHubAppClientId"]}:{config["GitHubAppClientSecret"]}")));
-
-                _log.LogInformation($"Authorization: Basic {config["GitHubAppClientId"]}...");
-            }
         }
 
         [FunctionName(nameof(GetEvents))]
@@ -105,6 +90,11 @@ namespace GithubStream
             {
                 request.Headers.IfNoneMatch.Add(ETag(page));
                 _log.LogInformation($"If-None-Match {ETag(page)}");
+            }
+
+            if (_http.DefaultRequestHeaders.Authorization != null)
+            {
+                _log.LogInformation($"Authorization: Basic {_http.DefaultRequestHeaders.Authorization.Parameter.Substring(0, 10)}...");
             }
 
             var response = await _http.SendAsync(request);
