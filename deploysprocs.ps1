@@ -1,4 +1,4 @@
-Install-Module -Name CosmosDB
+Install-Module -Name CosmosDB   # Thanks @PlagueHO !
 
 $cosmos = 'githubstream-cosmos'
 $cosmosdb = 'githubstream-db'
@@ -10,7 +10,7 @@ $cosmosDbContext = New-CosmosDbContext -Account $cosmos -Database $cosmosdb -Key
 $sprocs = Get-CosmosDbStoredProcedure -Context $cosmosDbContext -CollectionId $collection | % { $_.Id }
 
 Get-ChildItem -Path ./cosmos/sprocs -Name | ForEach-Object {
-    [string] $body = Get-Content -Path $( Join-Path './cosmos/sprocs' $_ )
+    [string] $body = Get-Content -Path $( Join-Path './cosmos/sprocs' $_ ) -Raw
     $id = $_.Replace('.js', '')
     if ($sprocs -contains $id) {
         Set-CosmosDbStoredProcedure -Context $cosmosDbContext -CollectionId $collection `
