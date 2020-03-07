@@ -1,0 +1,14 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "EventHubConnectionString": "",
+    "ServiceBusConnectionString": "",
+    "GitHubAppClientId": "",
+    "GitHubAppClientSecret": "",
+    "CosmosConnectionString": "",
+    "CosmosDbName": "githubstream-db",
+    "CosmosCollection": "dashboard"
+  }
+}
