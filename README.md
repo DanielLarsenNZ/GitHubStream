@@ -10,11 +10,12 @@ You will need:
 
 1. Azure Subscription
 1. PowerShell
-1. az CLI
+1. Azure PowerShell
+1. Azure CLI
 1. A GitHub App ClientId and Client Secret. This is optional, but required for polling the GitHub API
    at a rate of more than 60 times per hour.
 
-> **Note:** This script will deploy resources into your Azure Subscription that may cost you money:
+> **Note:** This script will deploy resources into your Azure Subscription that cost money.
 
 Run this script to deploy the entire environment. When this script completes the pipeline will be running.
 
@@ -38,3 +39,7 @@ See `./GithubStream/local.settings.example.json` for an example.
 <https://docs.microsoft.com/en-us/azure/stream-analytics/stream-analytics-add-inputs>
 
 <https://docs.microsoft.com/en-us/azure/stream-analytics/stream-analytics-window-functions>
+
+<https://docs.microsoft.com/en-us/azure/stream-analytics/stream-analytics-quick-create-powershell>
+
+<https://docs.microsoft.com/en-us/rest/api/streamanalytics/stream-analytics-input>

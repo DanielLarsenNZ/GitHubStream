@@ -7,3 +7,4 @@ _functionzip
 deployfunction.zip
 ASALocalRun
 .vscode
+streamanalytics/_*.json

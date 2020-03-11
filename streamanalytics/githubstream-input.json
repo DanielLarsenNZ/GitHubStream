@@ -1,0 +1,23 @@
+{
+    "properties": {
+        "type": "stream",
+        "serialization": {
+            "type": "Json",
+            "properties": {
+                "encoding": "UTF8"
+            }
+        },
+        "datasource": {
+            "type": "Microsoft.ServiceBus/EventHub",
+            "properties": {
+                "serviceBusNamespace": "$(servicebusNamespace)",
+                "sharedAccessPolicyName": "$(eventhubAuthRule)",
+                "sharedAccessPolicyKey": "$(eventhubAuthKey)",
+                "eventHubName": "githubstream"
+            }
+        },
+        "compression": {
+            "type": "GZip"
+        }
+    }
+}

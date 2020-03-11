@@ -1,0 +1,9 @@
+{
+  "location": "$location",
+  "properties": {
+    "sku": {
+      "name": "standard"
+    },
+    "compatibilityLevel": 1.1
+  }
+}
