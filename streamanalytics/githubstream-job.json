@@ -1,9 +1,94 @@
 {
-  "location": "$location",
+  "name": "gitstream-hub",
+  "location": "$(location)",
   "properties": {
     "sku": {
       "name": "standard"
     },
-    "compatibilityLevel": 1.1
+    "eventsOutOfOrderPolicy": "drop",
+    "eventsOutOfOrderMaxDelayInSeconds": 10,
+    "compatibilityLevel": 1.1,
+    "inputs": [
+      {
+        "name": "githubstream",
+        "properties": {
+          "type": "stream",
+          "serialization": {
+            "type": "Json",
+            "properties": {
+              "encoding": "UTF8"
+            }
+          },
+          "datasource": {
+            "type": "Microsoft.ServiceBus/EventHub",
+            "properties": {
+              "serviceBusNamespace": "$(eventhubNamespace)",
+              "sharedAccessPolicyName": "$(eventhubAuthRule)",
+              "sharedAccessPolicyKey": "$(eventhubAuthKey)",
+              "eventHubName": "$(eventhub)"
+            }
+          }
+        }
+      }
+    ],
+    "transformation": {
+      "name": "ProcessSampleData",
+      "properties": {
+        "streamingUnits": 1,
+        "query": "$(query)"
+      }
+    },
+    "outputs": [
+      {
+        "name": "comments",
+        "properties": {
+          "datasource": {
+            "type": "Microsoft.ServiceBus/Topic",
+            "properties": {
+              "serviceBusNamespace": "$(serviceBusNamespace)",
+              "sharedAccessPolicyName": "$(sharedAccessPolicyName)",
+              "sharedAccessPolicyKey": "$(sharedAccessPolicyKey)",
+              "topicName": "comments",
+              "propertyColumns": [
+                "created_at",
+                "type"
+              ]
+            }
+          },
+          "serialization": {
+            "type": "Json",
+            "properties": {
+              "encoding": "UTF8",
+              "format": "Array"
+            }
+          }
+        }
+      },
+      {
+        "name": "pushes",
+        "properties": {
+          "datasource": {
+            "type": "Microsoft.ServiceBus/Topic",
+            "properties": {
+              "serviceBusNamespace": "$(serviceBusNamespace)",
+              "sharedAccessPolicyName": "$(sharedAccessPolicyName)",
+              "sharedAccessPolicyKey": "$(sharedAccessPolicyKey)",
+              "topicName": "pushes",
+              "propertyColumns": [
+                "created_at",
+                "type"
+              ]
+            }
+          },
+          "serialization": {
+            "type": "Json",
+            "properties": {
+              "encoding": "UTF8",
+              "format": "Array"
+            }
+          }
+        }
+      }
+    ]
   }
 }
